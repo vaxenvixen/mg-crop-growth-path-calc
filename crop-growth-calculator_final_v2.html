@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crop Growth Path Calculator</title>
+<style>
+  :root{
+    --soil-950:#20180f;
+    --soil-900:#2b2117;
+    --soil-800:#3a2e20;
+    --leaf-500:#5f8a52;
+    --leaf-400:#7ba869;
+    --leaf-300:#a3c98f;
+    --cream:#f2ead9;
+    --cream-dim:#d9cdb3;
+    --amber:#c98b3c;
+    --amber-bright:#e7a94f;
+    --error:#c15b4a;
+    --guaranteed:#3f7a5c;
+    --font-display: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at top left, #2f2a1c 0%, transparent 55%),
+      radial-gradient(ellipse at bottom right, #1c2a1c 0%, transparent 55%),
+      var(--soil-950);
+    color:var(--cream);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding:40px 20px 80px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  header{margin-bottom:36px;}
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--leaf-300);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-size:clamp(28px,4vw,42px);
+    font-weight:600;
+    margin:0 0 8px;
+    color:var(--cream);
+    letter-spacing:-0.01em;
+  }
+  .sub{color:var(--cream-dim);font-size:15px;max-width:60ch;line-height:1.5;}
+
+  .panel{
+    background:linear-gradient(180deg, rgba(58,46,32,0.6), rgba(43,33,23,0.6));
+    border:1px solid rgba(163,201,143,0.15);
+    border-radius:10px;
+    padding:26px 28px;
+    margin-bottom:20px;
+  }
+  .panel h2{
+    font-family:var(--font-display);
+    font-size:15px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--leaf-300);
+    margin:0 0 18px;
+    font-weight:600;
+  }
+  .row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;}
+  .field{flex:1;min-width:200px;}
+  label{display:block;font-size:12.5px;color:var(--cream-dim);margin-bottom:6px;letter-spacing:0.02em;}
+  select, input[type=number]{
+    width:100%;
+    background:var(--soil-900);
+    border:1px solid rgba(163,201,143,0.25);
+    color:var(--cream);
+    padding:10px 12px;
+    border-radius:6px;
+    font-size:15px;
+    font-family:var(--font-body);
+  }
+  select:focus, input:focus{outline:2px solid var(--leaf-400);outline-offset:1px;}
+  .readout{
+    font-family:var(--font-mono);
+    font-size:14px;
+    color:var(--amber-bright);
+    background:rgba(0,0,0,0.2);
+    border-radius:6px;
+    padding:9px 12px;
+    border:1px solid rgba(201,139,60,0.25);
+  }
+  .hint{font-size:12px;color:var(--cream-dim);margin-top:6px;opacity:0.8;}
+  .warn{font-size:12.5px;color:var(--amber-bright);margin-top:6px;}
+  .toggle{display:flex;gap:8px;margin-bottom:16px;}
+  .toggle button{
+    flex:1;
+    padding:9px 10px;
+    border-radius:6px;
+    border:1px solid rgba(163,201,143,0.25);
+    background:transparent;
+    color:var(--cream-dim);
+    cursor:pointer;
+    font-size:13.5px;
+    font-family:var(--font-body);
+  }
+  .toggle button.active{
+    background:var(--leaf-500);
+    border-color:var(--leaf-500);
+    color:var(--soil-950);
+    font-weight:600;
+  }
+  .checkbox-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    cursor:pointer;
+    margin-top:4px;
+    padding:10px 12px;
+    background:rgba(0,0,0,0.15);
+    border:1px solid rgba(163,201,143,0.15);
+    border-radius:6px;
+  }
+  .checkbox-row input{margin-top:3px;flex-shrink:0;width:16px;height:16px;accent-color:var(--leaf-500);}
+  .checkbox-row span{font-size:12.5px;color:var(--cream-dim);line-height:1.5;}
+  .proc-box{
+    margin-top:14px;
+    padding:14px 16px;
+    background:rgba(0,0,0,0.15);
+    border:1px solid rgba(201,139,60,0.25);
+    border-radius:6px;
+  }
+  .secondary-btn{
+    padding:10px 16px;
+    border-radius:6px;
+    border:1px solid var(--leaf-500);
+    background:transparent;
+    color:var(--leaf-300);
+    cursor:pointer;
+    font-size:13.5px;
+    font-family:var(--font-body);
+    white-space:nowrap;
+    transition:background 0.15s;
+  }
+  .secondary-btn:hover{background:rgba(95,138,82,0.15);}
+  .chip-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .chip{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--soil-900);
+    border:1px solid rgba(163,201,143,0.25);
+    color:var(--cream);
+    padding:6px 6px 6px 14px;
+    border-radius:20px;
+    font-family:var(--font-mono);
+    font-size:13px;
+    cursor:pointer;
+    transition:background 0.15s, border-color 0.15s;
+  }
+  .chip:hover{border-color:rgba(201,139,60,0.5);}
+  .chip.selected{
+    background:rgba(201,139,60,0.28);
+    border-color:var(--amber-bright);
+    color:var(--amber-bright);
+  }
+  .chip .pin{font-size:11px;opacity:0.75;}
+  .chip button{
+    background:rgba(193,91,74,0.15);
+    border:1px solid rgba(193,91,74,0.4);
+    color:var(--error);
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:13px;
+    line-height:1;
+    padding:0;
+    font-family:var(--font-body);
+  }
+  .chip button:hover{background:rgba(193,91,74,0.3);}
+  .bee-row{background:rgba(135,206,250,0.12);}
+  .bee-row td{color:#87cefa;}
+  tr.owned-row{background:rgba(201,139,60,0.22);}
+  tr.owned-row td{background:rgba(201,139,60,0.22);}
+  .bee-box{
+    margin-top:22px;
+    padding:16px 18px;
+    background:rgba(135,206,250,0.06);
+    border:1px solid rgba(135,206,250,0.35);
+    border-radius:8px;
+  }
+  .ref-grid{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--cream-dim);}
+  .ref-grid strong{color:var(--cream);font-family:var(--font-mono);}
+
+  button.primary{
+    width:100%;
+    background:linear-gradient(180deg,var(--amber-bright),var(--amber));
+    color:var(--soil-950);
+    border:none;
+    padding:14px;
+    border-radius:8px;
+    font-size:15.5px;
+    font-weight:700;
+    letter-spacing:0.01em;
+    cursor:pointer;
+    font-family:var(--font-body);
+  }
+  button.primary:hover{filter:brightness(1.06);}
+  button.primary:active{transform:translateY(1px);}
+
+  .error-box{
+    background:rgba(193,91,74,0.12);
+    border:1px solid rgba(193,91,74,0.4);
+    color:#f0b9ae;
+    padding:14px 16px;
+    border-radius:8px;
+    font-size:14px;
+    line-height:1.5;
+  }
+  .result-summary{
+    display:flex;
+    gap:24px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+    padding-bottom:18px;
+    border-bottom:1px solid rgba(163,201,143,0.15);
+  }
+  .stat{}
+  .stat .num{font-family:var(--font-mono);font-size:22px;color:var(--amber-bright);}
+  .stat .lbl{font-size:11.5px;color:var(--cream-dim);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
+  .tier-tag{
+    display:inline-block;
+    font-size:11.5px;
+    padding:3px 9px;
+    border-radius:999px;
+    background:rgba(63,122,92,0.25);
+    border:1px solid rgba(63,122,92,0.6);
+    color:var(--leaf-300);
+    font-family:var(--font-mono);
+  }
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--cream-dim);
+    padding:8px 10px;
+    border-bottom:1px solid rgba(163,201,143,0.2);
+  }
+  td{
+    padding:8px 10px;
+    border-bottom:1px solid rgba(163,201,143,0.08);
+    font-family:var(--font-mono);
+    color:var(--cream);
+  }
+  td.mult-guaranteed{color:var(--leaf-300);font-weight:600;}
+  tr:hover td{background:rgba(163,201,143,0.04);}
+  footer{margin-top:30px;font-size:12px;color:var(--cream-dim);opacity:0.6;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Growth Path Solver</div>
+    <h1>Crop Growth Path Calculator</h1>
+    <p class="sub">Finds the shortest path of size-boost multipliers (1.050–1.100) from your crop's current size to a target size — favouring guaranteed butterfly values (1.080–1.100) and repeated steps where possible.</p>
+  </header>
+
+  <div class="panel">
+    <h2>Crop &amp; current position</h2>
+    <div class="row">
+      <div class="field">
+        <label for="cropSelect">Crop</label>
+        <select id="cropSelect"></select>
+      </div>
+      <div class="field">
+        <label for="priceInput">Current sell price</label>
+        <input type="number" id="priceInput" step="any" placeholder="e.g. 5146012">
+        <div class="hint" id="priceBounds"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="hydroSelect">Hydro mutation</label>
+        <select id="hydroSelect"></select>
+      </div>
+      <div class="field">
+        <label for="lunarSelect">Lunar mutation</label>
+        <select id="lunarSelect"></select>
+      </div>
+      <div class="field">
+        <label for="colourSelect">Colour mutation</label>
+        <select id="colourSelect"></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Current size</label>
+        <div class="readout" id="curSize">—</div>
+      </div>
+      <div class="field">
+        <label>Current weight (kg)</label>
+        <div class="readout" id="curWeight">—</div>
+      </div>
+    </div>
+    <div class="ref-grid" id="cropRef"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Target</h2>
+    <div class="toggle">
+      <button id="modeSizeBtn" class="active" type="button">Target size</button>
+      <button id="modeScaleBtn" type="button">Target scale (1×–3×)</button>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="targetInput" id="targetLabel">Target size</label>
+        <input type="number" id="targetInput" step="any">
+      </div>
+      <div class="field">
+        <label for="marginInput" id="marginLabel">Error margin (size units)</label>
+        <input type="number" id="marginInput" step="any" value="0.1">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Target size resolved</label>
+        <div class="readout" id="tgtSize">—</div>
+      </div>
+      <div class="field">
+        <label>Target weight (kg)</label>
+        <div class="readout" id="tgtWeight">—</div>
+      </div>
+    </div>
+    <label class="checkbox-row" for="preferRepeatCheckbox">
+      <input type="checkbox" id="preferRepeatCheckbox">
+      <span>Prefer one repeatable guaranteed multiplier (1.080–1.100) for every step, even if that means more steps overall — instead of swapping in a lower value just to finish faster.</span>
+    </label>
+  </div>
+
+  <div class="panel">
+    <h2>Your Pets (optional)</h2>
+    <div class="row" style="align-items:flex-end;">
+      <div class="field" style="max-width:150px;">
+        <label for="ownedTypeSelect">Pet type</label>
+        <select id="ownedTypeSelect">
+          <option value="butterfly">Butterfly</option>
+          <option value="bee">Bee</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:150px;">
+        <label for="ownedCurrentInput">Current level</label>
+        <input type="number" id="ownedCurrentInput" min="50" max="100" step="1" placeholder="72">
+      </div>
+      <div class="field" style="max-width:150px;">
+        <label for="ownedMaxInput">Max level</label>
+        <input type="number" id="ownedMaxInput" min="50" max="100" step="1" placeholder="88">
+      </div>
+      <div class="field" style="flex:0 0 auto;">
+        <button type="button" id="addButterflyBtn" class="secondary-btn">+ Add pet</button>
+      </div>
+    </div>
+    <div id="ownedButterfliesList" class="chip-list"></div>
+    <div class="hint">Butterfly levels are clamped to 50–100; bee levels are clamped to 80–100 (bees below Lvl 80 aren't usable). Tap a pet below to lock it in as the forced first step of a solution — tap it again to release it and let the solver pick automatically. An orange step in the results means it comes from one of your owned pets.</div>
+    <label class="checkbox-row" for="onlyOwnedCheckbox" style="margin-top:12px;">
+      <input type="checkbox" id="onlyOwnedCheckbox">
+      <span>Only use my owned pets — don't suggest hypothetical butterflies or bees I don't have for any solution.</span>
+    </label>
+  </div>
+
+  <button class="primary" id="calcBtn" type="button">Calculate growth path</button>
+
+  <div class="panel" id="resultPanel" style="display:none;margin-top:20px;"></div>
+
+  <footer>All multipliers use 0.001 increments between 1.050 and 1.100. Values 1.080–1.100 are treated as guaranteed (butterfly pet range).</footer>
+</div>
+
+<script>
+const CROPS = [
+  {n:"Carrot", p:20, b:0.100, m:0.300},
+  {n:"Cabbage", p:425, b:1.000, m:3.000},
+  {n:"Strawberry", p:141, b:0.050, m:0.100},
+  {n:"Aloe", p:310, b:1.500, m:3.750},
+  {n:"Beet", p:350, b:0.300, m:0.900},
+  {n:"Clover", p:306, b:0.010, m:0.030},
+  {n:"Four-Leaf Clover", p:7777, b:0.010, m:0.030},
+  {n:"Rose", p:300, b:0.010, m:0.040},
+  {n:"Delphinium", p:530, b:0.020, m:0.060},
+  {n:"Snowdrop", p:250, b:0.0100, m:0.0185},
+  {n:"Double Snowdrop", p:8888, b:0.0100, m:0.0185},
+  {n:"Fava Bean", p:306, b:0.030, m:0.090},
+  {n:"Blueberry", p:233, b:0.010, m:0.020},
+  {n:"Apple", p:800, b:0.180, m:0.360},
+  {n:"Tulip", p:767, b:0.010, m:0.030},
+  {n:"Tomato", p:271, b:0.300, m:0.600},
+  {n:"Daisy", p:130, b:0.010, m:0.025},
+  {n:"Purple Daisy", p:9999, b:0.010, m:0.025},
+  {n:"Daffodil", p:1090, b:0.010, m:0.030},
+  {n:"Corn", p:364, b:1.200, m:2.400},
+  {n:"Watermelon", p:2708, b:4.500, m:13.500},
+  {n:"Pumpkin", p:3700, b:6.000, m:18.000},
+  {n:"Echeveria", p:3200, b:0.800, m:2.200},
+  {n:"Cattail", p:1800, b:0.030, m:0.075},
+  {n:"Variegated Cattail", p:11111, b:0.030, m:0.075},
+  {n:"Pear", p:3000, b:0.170, m:0.340},
+  {n:"Gentian", p:10000, b:0.020, m:0.060},
+  {n:"Lavender", p:20000, b:0.020, m:0.060},
+  {n:"Coconut", p:12000, b:5.000, m:15.000},
+  {n:"Pine Tree", p:75000, b:1000, m:3500},
+  {n:"Banana", p:1750, b:0.120, m:0.204},
+  {n:"Leek", p:35000, b:0.400, m:1.200},
+  {n:"Lily", p:20123, b:0.020, m:0.055},
+  {n:"Camellia", p:4875, b:0.300, m:0.750},
+  {n:"Squash", p:7000, b:0.300, m:0.750},
+  {n:"Peach", p:9000, b:0.180, m:0.540},
+  {n:"Burro's Tail", p:6000, b:0.400, m:1.000},
+  {n:"Cardoon", p:50000, b:0.600, m:1.800},
+  {n:"Saffron", p:50000, b:0.030, m:0.090},
+  {n:"Mushroom", p:160000, b:2.500, m:8.750},
+  {n:"Cactus", p:220000, b:1500, m:2700},
+  {n:"Bamboo", p:500000, b:1.000, m:2.000},
+  {n:"Violet Cort", p:600000, b:2.000, m:7.000},
+  {n:"Chrysanthemum", p:18000, b:0.0100, m:0.0275},
+  {n:"Date", p:15000, b:0.020, m:0.040},
+  {n:"Grape", p:50000, b:3.000, m:6.000},
+  {n:"Poinsettia", p:20000, b:0.020, m:0.040},
+  {n:"Prickly Pear", p:75000, b:0.150, m:0.375},
+  {n:"Eggplant", p:100000, b:0.500, m:1.250},
+  {n:"Pepper", p:7000, b:0.500, m:1.000},
+  {n:"Lemon", p:50000, b:0.500, m:1.500},
+  {n:"Passion Fruit", p:200000, b:9.500, m:19.000},
+  {n:"Dragon Fruit", p:30000, b:8.400, m:16.800},
+  {n:"Cacao", p:150000, b:0.500, m:1.250},
+  {n:"Lychee", p:50000, b:9.000, m:18.000},
+  {n:"Milkcap", p:3000000, b:2.000, m:6.000},
+  {n:"Ube", p:2000000, b:3.500, m:10.500},
+  {n:"Sunflower", p:750000, b:10.000, m:25.000},
+  {n:"Thunderpeel", p:100000, b:1.000, m:2.000},
+  {n:"Stormcap", p:1000000, b:1.000, m:2.000},
+  {n:"Dawnbreaker", p:12000000, b:100, m:300},
+  {n:"Starweaver", p:10000000, b:10.000, m:20.000},
+  {n:"Dawnbinder", p:11000000, b:6.000, m:15.000},
+  {n:"Moonbinder", p:11000000, b:2.000, m:4.000}
+];
+
+const cropSelect = document.getElementById('cropSelect');
+[...CROPS].sort((a,b)=>a.n.localeCompare(b.n)).forEach(c=>{
+  const opt = document.createElement('option');
+  opt.value = c.n;
+  opt.textContent = c.n;
+  cropSelect.appendChild(opt);
+});
+
+function getCrop(name){ return CROPS.find(c=>c.n===name); }
+function weightFromSize(crop,size){ return crop.b + (size-50)*(crop.m-crop.b)/50; }
+function sizeFromWeight(crop,weight){ return 50 + (weight-crop.b)*50/(crop.m-crop.b); }
+
+// ---- Mutations ----
+// HydroMultiplier/LunarMultiplier/ColourMultiplier are used directly in:
+//   effectiveBasePrice = crop.p * (hydroMultiplier + lunarMultiplier - 1) * colourMultiplier
+const MUTATIONS = [
+  {name:"None",           category:"None",   multiplier:1,  hydro:1, lunar:1, colour:1},
+  {name:"Wet",            category:"Hydro",  multiplier:2,  hydro:2, lunar:1, colour:1},
+  {name:"Chilled",        category:"Hydro",  multiplier:2,  hydro:2, lunar:1, colour:1},
+  {name:"Frozen",         category:"Hydro",  multiplier:6,  hydro:6, lunar:1, colour:1},
+  {name:"Thunderstruck",  category:"Hydro",  multiplier:5,  hydro:5, lunar:1, colour:1},
+  {name:"Thundercharged", category:"Hydro",  multiplier:7,  hydro:7, lunar:1, colour:1},
+  {name:"Dawnlit",        category:"Lunar",  multiplier:4,  hydro:1, lunar:4, colour:1},
+  {name:"Amberlit",       category:"Lunar",  multiplier:6,  hydro:1, lunar:6, colour:1},
+  {name:"Dawnbound",      category:"Lunar",  multiplier:7,  hydro:1, lunar:7, colour:1},
+  {name:"Amberbound",     category:"Lunar",  multiplier:10, hydro:1, lunar:10, colour:1},
+  {name:"Gold",           category:"Colour", multiplier:25, hydro:1, lunar:1, colour:25},
+  {name:"Rainbow",        category:"Colour", multiplier:50, hydro:1, lunar:1, colour:50}
+];
+function getMutation(name){ return MUTATIONS.find(m=>m.name===name) || MUTATIONS[0]; }
+function populateMutationSelect(selectEl, category){
+  const opts = MUTATIONS.filter(m=>m.category==='None' || m.category===category);
+  opts.forEach(m=>{
+    const opt = document.createElement('option');
+    opt.value = m.name;
+    opt.textContent = m.name;
+    selectEl.appendChild(opt);
+  });
+  selectEl.value = 'None';
+}
+const hydroSelect = document.getElementById('hydroSelect');
+const lunarSelect = document.getElementById('lunarSelect');
+const colourSelect = document.getElementById('colourSelect');
+populateMutationSelect(hydroSelect, 'Hydro');
+populateMutationSelect(lunarSelect, 'Lunar');
+populateMutationSelect(colourSelect, 'Colour');
+
+// The user's input price reflects the mutation-inflated value. To read off the true growth
+// scale (1x-3x) we need the "effective base price" for this mutation combo — the size-50 price
+// a crop with these mutations would sell for — then clamp/scale against that instead of crop.p.
+function effectiveBasePrice(crop){
+  const hydroMult = getMutation(hydroSelect.value).hydro;
+  const lunarMult = getMutation(lunarSelect.value).lunar;
+  const colourMult = getMutation(colourSelect.value).colour;
+  let sellPrice = crop.p * (hydroMult + lunarMult - 1) * colourMult;
+  if(sellPrice < crop.p) sellPrice = crop.p;
+  return sellPrice;
+}
+function fmt(n, dp){
+  if(n===null||n===undefined||isNaN(n)) return '—';
+  let s = n.toFixed(dp);
+  return s;
+}
+function fmtWeight(n){ return fmt(n,5); }
+function fmtSize(n){ return fmt(n,4); }
+function scaleFromSize(size){ return 1 + (size-50)/25; }
+function fmtScale(n){ return fmt(n,4) + '×'; }
+function levelForMultiplier(m){ return Math.round((m-1)*1000); }
+function multiplierForLevel(L){ return Math.round((1+L/1000)*1000)/1000; }
+function fmtLevel(m){ return 'Lvl ' + levelForMultiplier(m); }
+
+let targetMode = 'size';
+const modeSizeBtn = document.getElementById('modeSizeBtn');
+const modeScaleBtn = document.getElementById('modeScaleBtn');
+const targetLabel = document.getElementById('targetLabel');
+const marginLabel = document.getElementById('marginLabel');
+const targetInput = document.getElementById('targetInput');
+modeSizeBtn.onclick = ()=>{ targetMode='size'; modeSizeBtn.classList.add('active'); modeScaleBtn.classList.remove('active'); targetLabel.textContent='Target size'; marginLabel.textContent='Error margin (size units)'; targetInput.placeholder='e.g. 95.75'; updateLive(); };
+modeScaleBtn.onclick = ()=>{ targetMode='scale'; modeScaleBtn.classList.add('active'); modeSizeBtn.classList.remove('active'); targetLabel.textContent='Target scale (1–3)'; marginLabel.textContent='Error margin (scale units)'; targetInput.placeholder='e.g. 1.5'; updateLive(); };
+targetInput.placeholder = 'e.g. 95.75';
+
+const priceInput = document.getElementById('priceInput');
+const marginInput = document.getElementById('marginInput');
+
+function updateLive(){
+  const crop = getCrop(cropSelect.value);
+  if(!crop) return;
+  const basePrice = effectiveBasePrice(crop);
+  document.getElementById('cropRef').innerHTML =
+    `<div>Base (size 50, unmutated): <strong>${fmtWeight(crop.b)} kg</strong></div>` +
+    `<div>Max (size 100): <strong>${fmtWeight(crop.m)} kg</strong></div>` +
+    `<div>Sell price range (with mutations): <strong>${Math.round(basePrice).toLocaleString()} – ${Math.round(basePrice*3).toLocaleString()}</strong></div>`;
+  document.getElementById('priceBounds').textContent =
+    `Valid range: ${Math.round(basePrice).toLocaleString()} (size 50) to ${Math.round(basePrice*3).toLocaleString()} (size 100)`;
+
+  const priceVal = parseFloat(priceInput.value);
+  if(!isNaN(priceVal)){
+    const clamped = Math.min(Math.max(priceVal, basePrice), basePrice*3);
+    const scale = clamped/basePrice;
+    const size = 50 + (scale-1)*25;
+    const weight = weightFromSize(crop, size);
+    document.getElementById('curSize').textContent = fmtSize(size);
+    document.getElementById('curWeight').textContent = fmtWeight(weight) + ' kg';
+  } else {
+    document.getElementById('curSize').textContent = '—';
+    document.getElementById('curWeight').textContent = '—';
+  }
+
+  const tVal = parseFloat(targetInput.value);
+  if(!isNaN(tVal)){
+    let tSize = targetMode==='size' ? tVal : 50 + (tVal-1)*25;
+    const tWeight = weightFromSize(crop, tSize);
+    document.getElementById('tgtSize').textContent = fmtSize(tSize);
+    document.getElementById('tgtWeight').textContent = fmtWeight(tWeight) + ' kg';
+  } else {
+    document.getElementById('tgtSize').textContent = '—';
+    document.getElementById('tgtWeight').textContent = '—';
+  }
+}
+cropSelect.addEventListener('change', updateLive);
+priceInput.addEventListener('input', updateLive);
+targetInput.addEventListener('input', updateLive);
+hydroSelect.addEventListener('change', updateLive);
+lunarSelect.addEventListener('change', updateLive);
+colourSelect.addEventListener('change', updateLive);
+cropSelect.value = 'Ube';
+updateLive();
+
+// ---- Owned pets list (butterflies and bees) ----
+let ownedList = []; // each: {type:'butterfly'|'bee', current, max, selected}
+function renderOwnedChips(){
+  const container = document.getElementById('ownedButterfliesList');
+  if(ownedList.length===0){
+    container.innerHTML = '<div class="hint" style="margin-top:0;">No pets added yet.</div>';
+    return;
+  }
+  container.innerHTML = ownedList.map((b,i)=>`
+    <div class="chip${b.selected?' selected':''}" data-idx="${i}">
+      <span>${b.type==='bee'?'🐝':'✦'} Lvl ${b.current}/${b.max}</span>
+      ${b.selected?'<span class="pin">locked in</span>':''}
+      <button type="button" data-idx="${i}" aria-label="Remove pet">×</button>
+    </div>
+  `).join('');
+  container.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('click', (e)=>{
+      if(e.target.closest('button')) return; // remove button handles its own click below
+      const idx = parseInt(chip.getAttribute('data-idx'),10);
+      const pet = ownedList[idx];
+      const nowSelected = !pet.selected;
+      // Only one pet of a given type can be locked in at a time.
+      ownedList.forEach(p=>{ if(p.type===pet.type) p.selected=false; });
+      pet.selected = nowSelected;
+      renderOwnedChips();
+    });
+  });
+  container.querySelectorAll('button[data-idx]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const idx = parseInt(btn.getAttribute('data-idx'),10);
+      ownedList.splice(idx,1);
+      renderOwnedChips();
+    });
+  });
+}
+document.getElementById('addButterflyBtn').addEventListener('click', ()=>{
+  const typeSelect = document.getElementById('ownedTypeSelect');
+  const curInput = document.getElementById('ownedCurrentInput');
+  const maxInput = document.getElementById('ownedMaxInput');
+  const type = typeSelect.value === 'bee' ? 'bee' : 'butterfly';
+  const floor = type==='bee' ? 80 : 50;
+  let cur = parseFloat(curInput.value);
+  let max = parseFloat(maxInput.value);
+  if(isNaN(cur) && isNaN(max)) return;
+  if(isNaN(cur)) cur = max;
+  if(isNaN(max)) max = cur;
+  cur = Math.max(floor, Math.min(100, cur));
+  max = Math.max(floor, Math.min(100, max));
+  if(max < cur) max = cur;
+  ownedList.push({type, current: Math.round(cur), max: Math.round(max), selected:false});
+  curInput.value = '';
+  maxInput.value = '';
+  curInput.focus();
+  renderOwnedChips();
+});
+renderOwnedChips();
+
+// ---- Multiplier solver ----
+const ALL = [];
+for(let v=1050; v<=1100; v++) ALL.push(v/1000);
+const GUAR = ALL.filter(v=>v>=1.0799999);
+const SUB = ALL.filter(v=>v<1.0799999);
+
+function findMinN(W0, Wlow, Whigh, maxN, loMult, hiMult){
+  loMult = loMult || 1.05;
+  hiMult = hiMult || 1.10;
+  for(let n=1;n<=maxN;n++){
+    const lo = W0*Math.pow(loMult,n);
+    const hi = W0*Math.pow(hiMult,n);
+    if(hi>=Wlow && lo<=Whigh) return n;
+  }
+  return null;
+}
+
+function tier1(n,W0,Wlow,Whigh,idealW,pools){
+  const guar = (pools||{}).guar || GUAR;
+  let best=null;
+  for(const g of guar){
+    const total = W0*Math.pow(g,n);
+    if(total>=Wlow && total<=Whigh){
+      const diff = Math.abs(total-idealW);
+      if(!best || diff<best.diff) best={value:g,total,diff};
+    }
+  }
+  if(!best) return null;
+  return {sequence:Array(n).fill(best.value), tier:1, total:best.total};
+}
+
+function tier2(n,W0,Wlow,Whigh,idealW,pools){
+  const guar = (pools||{}).guar || GUAR;
+  const sub = (pools||{}).sub || SUB;
+  let best=null;
+  for(const g of guar){
+    for(const s of sub){
+      for(let k=1;k<n;k++){
+        const total = W0*Math.pow(g,k)*Math.pow(s,n-k);
+        if(total>=Wlow && total<=Whigh){
+          const diff = Math.abs(total-idealW);
+          if(!best || diff<best.diff) best={g,s,k,total,diff};
+        }
+      }
+    }
+  }
+  if(!best) return null;
+  const seq = [...Array(best.k).fill(best.g), ...Array(n-best.k).fill(best.s)];
+  return {sequence:seq, tier:2, total:best.total};
+}
+
+function tier3(n,W0,Wlow,Whigh,idealW,pools){
+  const sub = (pools||{}).sub || SUB;
+  let best=null;
+  for(let i=0;i<sub.length;i++){
+    for(let j=i+1;j<sub.length;j++){
+      const s1=sub[i], s2=sub[j];
+      for(let k=1;k<n;k++){
+        const total = W0*Math.pow(s1,k)*Math.pow(s2,n-k);
+        if(total>=Wlow && total<=Whigh){
+          const diff = Math.abs(total-idealW);
+          if(!best || diff<best.diff) best={s1,s2,k,total,diff};
+        }
+      }
+    }
+  }
+  if(!best) return null;
+  const seq = [...Array(best.k).fill(best.s1), ...Array(n-best.k).fill(best.s2)];
+  return {sequence:seq, tier:3, total:best.total};
+}
+
+function totalOf(W0, seq){ let t=W0; for(const v of seq) t*=v; return t; }
+
+function tier4(n,W0,Wlow,Whigh,idealW){
+  let per = Math.pow(idealW/W0, 1/n);
+  per = Math.min(1.10, Math.max(1.05, per));
+  let rounded = Math.round(per*1000)/1000;
+  let seq = Array(n).fill(rounded);
+  let t = totalOf(W0,seq);
+  let iterations = 0;
+  while((t<Wlow || t>Whigh) && iterations<8000){
+    if(t<Wlow){
+      const idx = seq.findIndex(v=>v<1.0999999);
+      if(idx===-1) break;
+      seq[idx] = Math.round((seq[idx]+0.001)*1000)/1000;
+    } else {
+      const idx = seq.findIndex(v=>v>1.0500001);
+      if(idx===-1) break;
+      seq[idx] = Math.round((seq[idx]-0.001)*1000)/1000;
+    }
+    t = totalOf(W0,seq);
+    iterations++;
+  }
+  if(t<Wlow || t>Whigh) return null;
+  return {sequence:seq, tier:4, total:t};
+}
+
+function nearestApprox(n, W0, idealW){
+  let per = Math.pow(idealW/W0, 1/n);
+  per = Math.min(1.10, Math.max(1.05, per));
+  let rounded = Math.round(per*1000)/1000;
+  let seq = Array(n).fill(rounded);
+  let t = totalOf(W0,seq);
+  let improved = true, guard=0;
+  while(improved && guard<8000){
+    improved = false; guard++;
+    for(let i=0;i<n;i++){
+      const up = seq[i]<1.0999999 ? Math.round((seq[i]+0.001)*1000)/1000 : null;
+      const down = seq[i]>1.0500001 ? Math.round((seq[i]-0.001)*1000)/1000 : null;
+      const curDiff = Math.abs(t-idealW);
+      if(up!==null){
+        const tUp = t/seq[i]*up;
+        if(Math.abs(tUp-idealW) < curDiff){ seq[i]=up; t=tUp; improved=true; continue; }
+      }
+      if(down!==null){
+        const tDown = t/seq[i]*down;
+        if(Math.abs(tDown-idealW) < curDiff){ seq[i]=down; t=tDown; improved=true; }
+      }
+    }
+  }
+  return {sequence:seq, total:t};
+}
+
+function bestRepeatedAcrossRange(W0, Wlow, Whigh, idealW, maxN, pools){
+  let best = null;
+  for(let n=1; n<=maxN; n++){
+    const r = tier1(n, W0, Wlow, Whigh, idealW, pools);
+    if(r){
+      const diff = Math.abs(r.total - idealW);
+      if(!best || diff < best.diff) best = {...r, diff};
+    }
+  }
+  return best;
+}
+
+// GUAR is ascending and total grows monotonically with g for fixed n, so the valid
+// subset is always contiguous — just filter and read off the extremes.
+function guaranteedRangeForN(n, W0, Wlow, Whigh){
+  const valid = GUAR.filter(g=>{
+    const total = W0*Math.pow(g,n);
+    return total>=Wlow && total<=Whigh;
+  });
+  return valid;
+}
+
+// Only checks a few levels either side of the chosen value (default 3) rather than the
+// full 1.080–1.100 range, to keep the "nearby alternatives" list focused.
+function nearbyMultiplierRange(g, n, W0, Wlow, Whigh, cap){
+  cap = cap || 3;
+  const gLevel = levelForMultiplier(g);
+  const out = [];
+  for(let d=-cap; d<=cap; d++){
+    const lvl = gLevel+d;
+    if(lvl<50 || lvl>100) continue;
+    const val = multiplierForLevel(lvl);
+    const total = W0*Math.pow(val,n);
+    if(total>=Wlow && total<=Whigh) out.push(val);
+  }
+  out.sort((a,b)=>a-b);
+  return out;
+}
+
+// ---- Proc-chance math ----
+// Proc chance per minute = level% × 0.4% (e.g. level 50 → 0.2%/min), converted to per-second below.
+const HOURS_PER_LEVEL = 4.8; // time a butterfly spends at a level before levelling up
+
+// ---- Bees ----
+// Bees scale linearly from Lvl 80 (1.048) to Lvl 100 (1.060), and only levels 80+ are usable.
+const BEE_LEVELS = [];
+for(let l=80; l<=100; l++) BEE_LEVELS.push(l);
+function beeMultiplier(L){ return Math.round((1+L*0.0006)*10000)/10000; }
+function beeLevelForMultiplier(v){ return Math.round((v-1)/0.0006); }
+
+// Tries a single repeated bee value the whole way — no butterfly involved.
+function tryPureBee(W0, Wlow, Whigh, idealW, maxN){
+  let best = null;
+  for(const bl of BEE_LEVELS){
+    const bv = beeMultiplier(bl);
+    for(let n=1; n<=maxN; n++){
+      const total = W0*Math.pow(bv,n);
+      if(total>=Wlow && total<=Whigh){
+        const diff = Math.abs(total-idealW);
+        if(!best || diff<best.diff) best = {beeLevel:bl, beeValue:bv, n, total, diff};
+      }
+    }
+  }
+  return best;
+}
+
+function buildMixedStepRows(steps, W0, crop, highlightFirst){
+  let rows=''; let running=W0;
+  steps.forEach((s,i)=>{
+    running *= s.value;
+    const sz = sizeFromWeight(crop, running);
+    const isBee = s.kind==='bee';
+    const lvl = isBee ? beeLevelForMultiplier(s.value) : levelForMultiplier(s.value);
+    const classes = [isBee?'bee-row':'', (highlightFirst && i===0)?'owned-row':''].filter(Boolean).join(' ');
+    rows += `<tr class="${classes}">
+      <td>${i+1}</td>
+      <td>${s.value.toFixed(isBee?4:3)}${isBee?' 🐝':' ✦'}</td>
+      <td>${isBee?'Bee':'Butterfly'}</td>
+      <td>Lvl ${lvl}</td>
+      <td>${fmtWeight(running)} kg</td>
+      <td>${fmtSize(sz)}</td>
+      <td>${fmtScale(scaleFromSize(sz))}</td>
+    </tr>`;
+  });
+  return rows;
+}
+function procPerMinute(level){ return (level/100) * 0.004; }
+function procPerSecond(level){ return procPerMinute(level) / 60; }
+// P(X >= k) for X ~ Poisson(lambda) — used because a solution that repeats a level n times
+// needs that many successful procs *collectively*, not just one.
+function poissonAtLeast(lambda, k){
+  if(k<=0) return 1;
+  if(lambda<=0) return 0;
+  let cdf = Math.exp(-lambda);
+  let term = cdf;
+  for(let i=1;i<k;i++){
+    term *= lambda/i;
+    cdf += term;
+  }
+  return Math.max(0, Math.min(1, 1-cdf));
+}
+function procProbabilityAtLeast(level, windowHours, butterflyCount, successesNeeded){
+  const pSec = procPerSecond(level);
+  const seconds = windowHours*3600;
+  const lambda = Math.max(0,butterflyCount) * pSec * seconds;
+  return poissonAtLeast(lambda, successesNeeded);
+}
+// Counts how many of the 51 possible levels (50-100), if repeated n times, would land the
+// final weight inside [Wlow, Whigh] — used to widen the proc-timing window when the margin
+// is generous enough to accept more than one level.
+function levelsWithinMargin(n, W0, Wlow, Whigh){
+  let count = 0;
+  for(let lvl=50; lvl<=100; lvl++){
+    const total = W0*Math.pow(multiplierForLevel(lvl), n);
+    if(total>=Wlow && total<=Whigh) count++;
+  }
+  return count;
+}
+
+// ---- Owned pets: pools ----
+// Splits the owned list by type, and builds the value pool a solver should search.
+// In "only owned" mode the pool is just the person's actual current/max levels;
+// otherwise it's the full range for that pet type.
+function ownedButterflies(owned){ return owned.filter(p=>p.type==='butterfly'); }
+function ownedBees(owned){ return owned.filter(p=>p.type==='bee'); }
+// If the person has locked in (clicked) a specific pet of this type, only that one is tried
+// as the first step; otherwise every owned pet of that type is tried and the best one wins.
+function selectedOrAllOwned(ownedOfType){
+  const locked = ownedOfType.filter(p=>p.selected);
+  return locked.length>0 ? locked : ownedOfType;
+}
+
+function butterflyPools(owned, onlyOwned){
+  if(!onlyOwned) return {all:ALL, guar:GUAR, sub:SUB};
+  const levels = new Set();
+  ownedButterflies(owned).forEach(b=>{ levels.add(b.max); levels.add(b.current); });
+  const vals = [...levels].sort((a,b)=>a-b).map(multiplierForLevel);
+  return {all:vals, guar:vals.filter(v=>v>=1.0799999), sub:vals.filter(v=>v<1.0799999)};
+}
+function beeValuePool(owned, onlyOwned){
+  if(!onlyOwned) return BEE_LEVELS.map(beeMultiplier);
+  const levels = new Set();
+  ownedBees(owned).forEach(b=>{ levels.add(b.max); levels.add(b.current); });
+  return [...levels].filter(l=>l>=80 && l<=100).sort((a,b)=>a-b).map(beeMultiplier);
+}
+
+// ---- Forced-first-step helper ----
+// Locks v0 in as step 1, then finds the shortest, closest-fitting repeated value from
+// repeatPool to cover the rest of the way. This is how an owned pet gets prioritised as
+// the first step of a solution, with everything after it filled in normally.
+function forcedFirstThenRepeat(v0, W0, Wlow, Whigh, idealW, repeatPool, maxN){
+  const W1 = W0*v0;
+  if(W1 > Whigh) return null;
+  if(W1>=Wlow && W1<=Whigh) return {sequence:[v0], total:W1};
+  if(!repeatPool || repeatPool.length===0) return null;
+  let best=null;
+  for(const g of repeatPool){
+    for(let n=1;n<=maxN;n++){
+      const total = W1*Math.pow(g,n);
+      if(total>=Wlow && total<=Whigh){
+        const diff = Math.abs(total-idealW);
+        if(!best || n<best.n || (n===best.n && diff<best.diff)) best={g,n,total,diff};
+      }
+    }
+  }
+  if(!best) return null;
+  return {sequence:[v0, ...Array(best.n).fill(best.g)], total:best.total};
+}
+
+// Tries every owned pet's current & max level as a forced first step, keeps the
+// shortest / closest-fitting outcome.
+function bestOwnedFirstStep(ownedPets, multiplierFn, repeatPool, W0, Wlow, Whigh, idealW, maxN){
+  if(!ownedPets || ownedPets.length===0) return null;
+  const levels = new Set();
+  ownedPets.forEach(b=>{ levels.add(b.max); levels.add(b.current); });
+  let best=null;
+  for(const lvl of levels){
+    const v0 = multiplierFn(lvl);
+    const r = forcedFirstThenRepeat(v0, W0, Wlow, Whigh, idealW, repeatPool, maxN);
+    if(r){
+      const diff = Math.abs(r.total-idealW);
+      if(!best || r.sequence.length<best.sequence.length || (r.sequence.length===best.sequence.length && diff<best.diff)){
+        best = {sequence:r.sequence, total:r.total, diff};
+      }
+    }
+  }
+  return best;
+}
+
+function bestRepeatedFromValues(values, W0, Wlow, Whigh, idealW, maxN){
+  let best=null;
+  const uniq=[...new Set(values)];
+  for(const v of uniq){
+    for(let n=1;n<=maxN;n++){
+      const total=W0*Math.pow(v,n);
+      if(total>=Wlow&&total<=Whigh){
+        const diff=Math.abs(total-idealW);
+        if(!best||diff<best.diff) best={value:v,n,total,diff};
+      }
+    }
+  }
+  return best;
+}
+
+// Runs tier1–3 restricted to a given pool of butterfly values (used for owned-only mode,
+// where the search can't invent levels the person doesn't have). Tier 4 is skipped here since
+// it fine-tunes across the full continuous 1.050–1.100 range, which owned-only can't use.
+function solveWithinPool(W0, Wlow, Whigh, idealW, pools, maxN, preferRepeat){
+  if(preferRepeat){
+    const repeated = bestRepeatedAcrossRange(W0, Wlow, Whigh, idealW, maxN, pools);
+    if(repeated) return {sequence:repeated.sequence, tier:1, total:repeated.total, n:repeated.sequence.length, preferredRepeat:true};
+  }
+  const loMult = Math.min(...pools.all), hiMult = Math.max(...pools.all);
+  let n = findMinN(W0, Wlow, Whigh, maxN, loMult, hiMult);
+  if(n===null) return null;
+  let result = tier1(n,W0,Wlow,Whigh,idealW,pools) || tier2(n,W0,Wlow,Whigh,idealW,pools) || tier3(n,W0,Wlow,Whigh,idealW,pools);
+  if(!result){
+    for(let extra=1; extra<=15 && !result; extra++){
+      const n2=n+extra;
+      const r = tier1(n2,W0,Wlow,Whigh,idealW,pools) || tier2(n2,W0,Wlow,Whigh,idealW,pools) || tier3(n2,W0,Wlow,Whigh,idealW,pools);
+      if(r){ result=r; n=n2; }
+    }
+  }
+  if(!result) return null;
+  return {...result, n};
+}
+
+// ---- Butterfly-only solution ----
+// Owned butterflies are always tried as a forced first step first. If "only owned" is on
+// and that fails, the whole search is restricted to owned levels. Otherwise it falls back
+// to the original free search across the full 1.050–1.100 range.
+function solveButterflyOnly(W0, Wlow, Whigh, idealW, owned, onlyOwned, preferRepeat, maxN){
+  const pools = butterflyPools(owned, onlyOwned);
+
+  const ownedFirst = bestOwnedFirstStep(selectedOrAllOwned(ownedButterflies(owned)), multiplierForLevel, pools.all, W0, Wlow, Whigh, idealW, maxN);
+  if(ownedFirst) return {...ownedFirst, tier:'owned', usedOwnedFirst:true};
+
+  if(onlyOwned){
+    if(pools.all.length===0){
+      return {error:'No owned butterflies added yet — add one above, or turn off "only use my owned pets" to see a general solution.'};
+    }
+    const r = solveWithinPool(W0, Wlow, Whigh, idealW, pools, maxN, preferRepeat);
+    if(!r) return {error:"None of your owned butterflies, alone or repeated up to 400 times, can reach this target within the margin."};
+    return {...r, usedOwnedFirst:false};
+  }
+
+  if(preferRepeat){
+    const repeated = bestRepeatedAcrossRange(W0, Wlow, Whigh, idealW, maxN);
+    if(repeated){
+      const validRange = nearbyMultiplierRange(repeated.sequence[0], repeated.sequence.length, W0, Wlow, Whigh, 3);
+      return {sequence:repeated.sequence, tier:1, total:repeated.total, n:repeated.sequence.length, preferredRepeat:true, validRange, usedOwnedFirst:false};
+    }
+    // No single repeatable value lands in range at any step count — fall through to the normal search.
+  }
+
+  let n = findMinN(W0, Wlow, Whigh, maxN);
+  if(n===null) return {error:"No sequence found within the search limit (400 steps). Try a smaller target or widen the error margin."};
+  let result = tier1(n,W0,Wlow,Whigh,idealW) || tier2(n,W0,Wlow,Whigh,idealW) || tier3(n,W0,Wlow,Whigh,idealW) || tier4(n,W0,Wlow,Whigh,idealW);
+  if(!result){
+    for(let extra=1; extra<=15 && !result; extra++){
+      const n2=n+extra;
+      const r = tier1(n2,W0,Wlow,Whigh,idealW) || tier2(n2,W0,Wlow,Whigh,idealW) || tier3(n2,W0,Wlow,Whigh,idealW) || tier4(n2,W0,Wlow,Whigh,idealW);
+      if(r){ result=r; n=n2; }
+    }
+  }
+  if(!result){
+    let best=null;
+    for(let n2=n; n2<=n+30; n2++){
+      const approx = nearestApprox(n2, W0, idealW);
+      const diff = Math.abs(approx.total-idealW);
+      if(!best || diff<best.diff) best={...approx, diff, n:n2};
+    }
+    return {fallback:true, sequence:best.sequence, total:best.total, n:best.n, usedOwnedFirst:false};
+  }
+  return {...result, n, usedOwnedFirst:false};
+}
+
+// ---- Bee-only solution ----
+// Same owned-first priority as butterflies, then a pure repeated bee value (Lvl 80–100,
+// or just the owned levels in "only owned" mode).
+function solveBeeOnly(W0, Wlow, Whigh, idealW, owned, onlyOwned, maxN){
+  const beeVals = beeValuePool(owned, onlyOwned);
+  const ownedFirst = bestOwnedFirstStep(selectedOrAllOwned(ownedBees(owned)), beeMultiplier, beeVals.length?beeVals:BEE_LEVELS.map(beeMultiplier), W0, Wlow, Whigh, idealW, maxN);
+  if(ownedFirst) return {...ownedFirst, usedOwnedFirst:true};
+
+  if(onlyOwned){
+    if(beeVals.length===0){
+      return {error:'No owned bees added yet — add one above, or turn off "only use my owned pets" to see a general solution.'};
+    }
+    const best = bestRepeatedFromValues(beeVals, W0, Wlow, Whigh, idealW, maxN);
+    if(!best) return {error:"None of your owned bees, repeated up to 400 times, can reach this target within the margin."};
+    return {sequence:Array(best.n).fill(best.value), total:best.total, usedOwnedFirst:false};
+  }
+
+  const pure = tryPureBee(W0, Wlow, Whigh, idealW, maxN);
+  if(!pure) return {error:"No repeated bee value (Lvl 80–100) can reach this target within the margin, even up to 400 steps."};
+  return {sequence:Array(pure.n).fill(pure.beeValue), total:pure.total, usedOwnedFirst:false};
+}
+
+// ---- Hybrid solution ----
+// Bee first step (owned bee preferred), then repeats whichever finishes the path: a
+// guaranteed butterfly is preferred for that second leg, falling back to another bee
+// if no guaranteed butterfly value can close the gap.
+function solveHybrid(W0, Wlow, Whigh, idealW, owned, onlyOwned, maxN){
+  const bfPools = butterflyPools(owned, onlyOwned);
+  const ownedBeePets = selectedOrAllOwned(ownedBees(owned));
+
+  // Tries a set of candidate first-step bee levels: guaranteed butterfly for step 2+
+  // is preferred, falling back to another bee if no guaranteed butterfly value fits.
+  function attempt(levels){
+    let best=null;
+    for(const lvl of levels){
+      const v0 = beeMultiplier(lvl);
+      const r = forcedFirstThenRepeat(v0, W0, Wlow, Whigh, idealW, bfPools.guar, maxN);
+      if(r && (!best || r.sequence.length<best.sequence.length)) best={sequence:r.sequence, total:r.total, secondKind:'butterfly'};
+    }
+    if(best) return best;
+    const beeVals = beeValuePool(owned, onlyOwned);
+    for(const lvl of levels){
+      const v0 = beeMultiplier(lvl);
+      const r = forcedFirstThenRepeat(v0, W0, Wlow, Whigh, idealW, beeVals, maxN);
+      if(r && (!best || r.sequence.length<best.sequence.length)) best={sequence:r.sequence, total:r.total, secondKind:'bee'};
+    }
+    return best;
+  }
+
+  if(ownedBeePets.length>0){
+    const ownedLevels = [...new Set(ownedBeePets.flatMap(b=>[b.max,b.current]))];
+    const r = attempt(ownedLevels);
+    if(r) return {...r, usedOwnedFirst:true};
+    if(onlyOwned) return {error:"None of your owned bees can start a hybrid path that lands within the margin."};
+    // Owned bees can't kick this off — fall through and try the general bee range instead.
+  } else if(onlyOwned){
+    return {error:'No owned bees added yet, so a hybrid path (which always starts with a bee) isn\'t available in owned-only mode.'};
+  }
+
+  const r2 = attempt(BEE_LEVELS);
+  if(r2) return {...r2, usedOwnedFirst:false};
+  return {error:"Couldn't find a hybrid (bee-first) path that lands within the margin, even up to 400 steps."};
+}
+
+function buildStepRows(seq, W0, crop, highlightFirst){
+  let rows=''; let running=W0;
+  const seenCount = {};
+  seq.forEach((v,i)=>{
+    running*=v;
+    const isG = v>=1.0799999;
+    const sz = sizeFromWeight(crop, running);
+    const level = levelForMultiplier(v);
+    let procCell = '—';
+    if(level<80){
+      const key = level;
+      seenCount[key] = (seenCount[key]||0)+1;
+      const c = seenCount[key];
+      const windowHours = c*HOURS_PER_LEVEL;
+      const chance = procProbabilityAtLeast(level, windowHours, 1, c)*100;
+      procCell = `${chance.toFixed(1)}% <span style="opacity:0.6;">(1 butterfly, ${c}× so far)</span>`;
+    }
+    const ownedClass = (highlightFirst && i===0) ? ' owned-row' : '';
+    rows += `<tr class="${ownedClass}">
+      <td>${i+1}</td>
+      <td class="${isG?'mult-guaranteed':''}">${v.toFixed(3)}${isG?' ✦':''}</td>
+      <td>${fmtLevel(v)}</td>
+      <td>${fmtWeight(running)} kg</td>
+      <td>${fmtSize(sz)}</td>
+      <td>${fmtScale(scaleFromSize(sz))}</td>
+      <td>${procCell}</td>
+    </tr>`;
+  });
+  return {rows, finalTotal:running};
+}
+
+function neighborOutcomes(v, W0, Wlow, Whigh){
+  const offsets = [-2,-1,1,2];
+  const seen = new Set([Math.round(v*1000)]);
+  const out = [];
+  for(const off of offsets){
+    let nv = Math.round((v*1000)+off);
+    if(nv<1050 || nv>1100) continue;
+    if(seen.has(nv)) continue;
+    seen.add(nv);
+    const val = nv/1000;
+    const total = W0*val;
+    out.push({
+      value: val,
+      total,
+      inMargin: total>=Wlow && total<=Whigh,
+      guaranteed: val>=1.0799999,
+      offset: off
+    });
+  }
+  out.sort((a,b)=>a.value-b.value);
+  return out;
+}
+
+function renderProcSection(level, n, W0, Wlow, Whigh, contextLabel){
+  const levelsInMargin = Math.max(1, levelsWithinMargin(n, W0, Wlow, Whigh));
+  const windowHours = levelsInMargin * HOURS_PER_LEVEL;
+  const perMin = procPerMinute(level)*100;
+  const perSec = procPerSecond(level)*100;
+  const p1 = procProbabilityAtLeast(level, windowHours, 1, n)*100;
+  const p2 = procProbabilityAtLeast(level, windowHours, 2, n)*100;
+  const p3 = procProbabilityAtLeast(level, windowHours, 3, n)*100;
+  return `
+    <div class="proc-box">
+      <div class="hint" style="margin-top:0;">${contextLabel} needs Lvl ${level} to proc <strong>${n}</strong> time${n>1?'s':''} — not guaranteed since it's below Lvl 80. Assuming ${HOURS_PER_LEVEL}h per level and every level in your margin counting toward the window:</div>
+      <div class="ref-grid" style="margin-top:8px;">
+        <div>Proc chance: <strong>${perMin.toFixed(4)}%/min</strong> (${perSec.toFixed(6)}%/sec)</div>
+        <div>Margin covers <strong>${levelsInMargin}</strong> level(s) → window ≈ <strong>${windowHours.toFixed(2)}h</strong></div>
+      </div>
+      <table style="margin-top:10px;">
+        <thead><tr><th>Butterflies at Lvl ${level}</th><th>Chance of ${n} proc${n>1?'s':''} within window</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>${p1.toFixed(2)}%</td></tr>
+          <tr><td>2</td><td>${p2.toFixed(2)}%</td></tr>
+          <tr><td>3</td><td>${p3.toFixed(2)}%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+document.getElementById('calcBtn').addEventListener('click', ()=>{
+  const crop = getCrop(cropSelect.value);
+  const panel = document.getElementById('resultPanel');
+  panel.style.display = 'block';
+
+  const priceVal = parseFloat(priceInput.value);
+  const tVal = parseFloat(targetInput.value);
+  const marginVal = parseFloat(marginInput.value);
+
+  if(isNaN(priceVal) || isNaN(tVal) || isNaN(marginVal) || marginVal<0){
+    panel.innerHTML = `<div class="error-box">Please fill in a valid current price, target value, and a non-negative error margin.</div>`;
+    return;
+  }
+
+  const basePrice = effectiveBasePrice(crop);
+  const clampedPrice = Math.min(Math.max(priceVal, basePrice), basePrice*3);
+  const scale = clampedPrice/basePrice;
+  const curSize = 50 + (scale-1)*25;
+  const curWeight = weightFromSize(crop, curSize);
+
+  let priceNote = '';
+  if(clampedPrice !== priceVal){
+    priceNote = `<div class="warn">Price clamped to ${Math.round(clampedPrice).toLocaleString()} (valid range ${Math.round(basePrice).toLocaleString()}–${Math.round(basePrice*3).toLocaleString()} for the selected mutations).</div>`;
+  }
+
+  const targetSize = targetMode==='size' ? tVal : 50 + (tVal-1)*25;
+  // Margin is entered in whichever unit the target uses (size or scale); convert to size
+  // units here since 1 scale unit = 25 size units.
+  const marginSize = targetMode==='size' ? marginVal : marginVal*25;
+  const preferRepeat = document.getElementById('preferRepeatCheckbox').checked;
+  const onlyOwned = document.getElementById('onlyOwnedCheckbox').checked;
+  const owned = ownedList;
+  const maxN = 400;
+
+  const Wlow = weightFromSize(crop, targetSize - marginSize);
+  const Whigh = weightFromSize(crop, targetSize + marginSize);
+  const idealW = weightFromSize(crop, targetSize);
+
+  if(Whigh <= curWeight){
+    panel.innerHTML = priceNote + `<div class="error-box">Target must be larger than the current size — multipliers only increase weight, they can't shrink it.</div>`;
+    return;
+  }
+
+  const tierLabels = {1:'Repeated guaranteed multiplier', 2:'Guaranteed + sub-1.08 mix', 3:'Two repeating sub-1.08 values', 4:'Best available sequence', owned:'Starts with your owned butterfly'};
+  const stepHead = `<thead><tr><th>Step</th><th>Multiplier</th><th>Level</th><th>Weight after</th><th>Size after</th><th>Scale after</th><th>Proc odds so far</th></tr></thead>`;
+  const mixedHead = `<thead><tr><th>Step</th><th>Multiplier</th><th>Type</th><th>Level</th><th>Weight after</th><th>Size after</th><th>Scale after</th></tr></thead>`;
+
+  // ---- Butterfly-only ----
+  const bfResult = solveButterflyOnly(curWeight, Wlow, Whigh, idealW, owned, onlyOwned, preferRepeat, maxN);
+  let bfHtml = '';
+  if(bfResult.error){
+    bfHtml = `<div class="warn">${bfResult.error}</div>`;
+  } else {
+    const resultSize = sizeFromWeight(crop, bfResult.total);
+    const {rows: rowsHtml} = buildStepRows(bfResult.sequence, curWeight, crop, bfResult.usedOwnedFirst);
+
+    let rangeHtml = '';
+    if(bfResult.tier===1 && !bfResult.usedOwnedFirst){
+      const nearby = bfResult.validRange || nearbyMultiplierRange(bfResult.sequence[0], bfResult.sequence.length, curWeight, Wlow, Whigh, 3);
+      if(nearby.length>1){
+        const lo = nearby[0], hi = nearby[nearby.length-1];
+        rangeHtml = `<div class="hint" style="margin-top:0;margin-bottom:14px;">Any repeated guaranteed multiplier from <strong style="color:var(--leaf-300);">${lo.toFixed(3)} (${fmtLevel(lo)})</strong> to <strong style="color:var(--leaf-300);">${hi.toFixed(3)} (${fmtLevel(hi)})</strong> lands within your margin at ${bfResult.sequence.length} steps.</div>`;
+      }
+    }
+
+    let mainProcHtml = '';
+    if(bfResult.sequence.length===1){
+      const chosenLevel = levelForMultiplier(bfResult.sequence[0]);
+      if(chosenLevel<80) mainProcHtml = renderProcSection(chosenLevel, 1, curWeight, Wlow, Whigh, 'Your result');
+    }
+
+    let neighborHtml = '';
+    if(!bfResult.fallback && bfResult.sequence.length===1){
+      const chosen = bfResult.sequence[0];
+      const neighbors = neighborOutcomes(chosen, curWeight, Wlow, Whigh);
+      if(neighbors.length){
+        const nRows = neighbors.map(nb=>{
+          const nbSize = sizeFromWeight(crop, nb.total);
+          const nbLevel = levelForMultiplier(nb.value);
+          return `<tr>
+            <td class="${nb.guaranteed?'mult-guaranteed':''}">${nb.value.toFixed(3)}${nb.guaranteed?' ✦':''}</td>
+            <td>${fmtLevel(nb.value)}</td>
+            <td>${nb.offset>0?'+':''}${nb.offset}</td>
+            <td>${fmtWeight(nb.total)} kg</td>
+            <td>${fmtSize(nbSize)}</td>
+            <td>${fmtScale(scaleFromSize(nbSize))}</td>
+            <td>${nb.inMargin ? '<span style="color:var(--guaranteed);">yes</span>' : '<span style="color:var(--error);">no</span>'}</td>
+            <td>${nbLevel<80 ? (procProbabilityAtLeast(nbLevel, HOURS_PER_LEVEL, 1, 1)*100).toFixed(2)+'%' : '—'}</td>
+          </tr>`;
+        }).join('');
+        neighborHtml = `
+          <h2 style="margin-top:22px;">Nearby single-step alternatives</h2>
+          <table>
+            <thead><tr><th>Multiplier</th><th>Level</th><th>Offset</th><th>Weight</th><th>Size</th><th>Scale</th><th>Within margin?</th><th>Proc odds (1 butterfly)</th></tr></thead>
+            <tbody>${nRows}</tbody>
+          </table>
+          <div class="hint" style="margin-top:14px;">Single-step outcomes 2 below to 2 above the chosen ${chosen.toFixed(3)}, so you can compare against a non-maxed butterfly.</div>
+        `;
+      }
+    }
+
+    bfHtml = `
+      <div class="result-summary">
+        <div class="stat"><div class="num">${bfResult.sequence.length}</div><div class="lbl">Steps</div></div>
+        <div class="stat"><div class="num">${fmtSize(resultSize)}</div><div class="lbl">Final size</div></div>
+        <div class="stat"><div class="num">${fmtWeight(bfResult.total)}</div><div class="lbl">Final weight (kg)</div></div>
+        <div class="stat"><span class="tier-tag">${bfResult.fallback ? 'Nearest match' : (bfResult.usedOwnedFirst ? tierLabels.owned : tierLabels[bfResult.tier])}</span></div>
+        <div class="stat"><div class="num">${fmtScale(scaleFromSize(resultSize))}</div><div class="lbl">Final scale</div></div>
+      </div>
+      ${bfResult.fallback ? `<div class="warn">Couldn't land inside the ±${marginSize} margin — showing the closest achievable result instead (off by ${fmt(Math.abs(sizeFromWeight(crop,bfResult.total)-targetSize),4)} size).</div>` : ''}
+      ${bfResult.usedOwnedFirst ? `<div class="hint" style="margin-top:0;margin-bottom:14px;color:var(--leaf-300);">Starts with your owned butterfly (Lvl ${levelForMultiplier(bfResult.sequence[0])}), then fills the rest of the path normally.</div>` : ''}
+      ${bfResult.preferredRepeat ? `<div class="hint" style="margin-top:0;margin-bottom:14px;">Found by searching across step counts for a single repeatable guaranteed multiplier (1.080–1.100), prioritising repetition over the closest possible fit.</div>` : ''}
+      ${rangeHtml}
+      <table>${stepHead}<tbody>${rowsHtml}</tbody></table>
+      <div class="hint" style="margin-top:14px;">✦ marks a guaranteed (butterfly) multiplier, 1.080–1.100. Level = (multiplier − 1) × 1000, e.g. 1.084 = Lvl 84. "Proc odds so far" assumes 1 butterfly and shows the chance of that many sub-80 procs having landed by that step.</div>
+      ${mainProcHtml}
+      ${neighborHtml}
+    `;
+  }
+
+  // ---- Hybrid ----
+  const hybridResult = solveHybrid(curWeight, Wlow, Whigh, idealW, owned, onlyOwned, maxN);
+  let hybridHtml = '';
+  if(hybridResult.error){
+    hybridHtml = `<div class="warn">${hybridResult.error}</div>`;
+  } else {
+    const steps = hybridResult.sequence.map((v,i)=> i===0
+      ? {value:v, kind:'bee'}
+      : {value:v, kind:hybridResult.secondKind || 'butterfly'});
+    const rows = buildMixedStepRows(steps, curWeight, crop, hybridResult.usedOwnedFirst);
+    const size = sizeFromWeight(crop, hybridResult.total);
+    hybridHtml = `
+      ${hybridResult.usedOwnedFirst ? `<div class="hint" style="margin-top:0;">Starts with your owned bee, then repeats a ${hybridResult.secondKind==='butterfly'?'guaranteed butterfly':'bee'} value to finish.</div>` : `<div class="hint" style="margin-top:0;">Starts with a bee step, then repeats a ${hybridResult.secondKind==='butterfly'?'guaranteed butterfly':'bee'} value to finish.</div>`}
+      <table>${mixedHead}<tbody>${rows}</tbody></table>
+      <div class="hint" style="margin-top:10px;">Total: ${steps.length} step${steps.length>1?'s':''} → ${fmtWeight(hybridResult.total)} kg (${fmtSize(size)}).</div>
+    `;
+  }
+
+  // ---- Bee-only ----
+  const beeResult = solveBeeOnly(curWeight, Wlow, Whigh, idealW, owned, onlyOwned, maxN);
+  let beeOnlyHtml = '';
+  if(beeResult.error){
+    beeOnlyHtml = `<div class="warn">${beeResult.error}</div>`;
+  } else {
+    const steps = beeResult.sequence.map(v=>({value:v, kind:'bee'}));
+    const rows = buildMixedStepRows(steps, curWeight, crop, beeResult.usedOwnedFirst);
+    const size = sizeFromWeight(crop, beeResult.total);
+    beeOnlyHtml = `
+      ${beeResult.usedOwnedFirst ? `<div class="hint" style="margin-top:0;">Starts with your owned bee, then repeats the best available bee value to finish.</div>` : ''}
+      <table>${mixedHead}<tbody>${rows}</tbody></table>
+      <div class="hint" style="margin-top:10px;">Total: ${steps.length} step${steps.length>1?'s':''} → ${fmtWeight(beeResult.total)} kg (${fmtSize(size)}).</div>
+    `;
+  }
+
+  panel.innerHTML = priceNote + `
+    <h2>Butterfly-Only Solution</h2>
+    ${bfHtml}
+    <div class="bee-box">
+      <h2 style="color:#87cefa;margin-top:0;">🐝 Hybrid Solution</h2>
+      ${hybridHtml}
+    </div>
+    <div class="bee-box" style="margin-top:16px;">
+      <h2 style="color:#87cefa;margin-top:0;">🐝 Bee-Only Solution</h2>
+      ${beeOnlyHtml}
+    </div>
+    ${onlyOwned ? `<div class="hint" style="margin-top:16px;">"Only use my owned pets" is on — all three solutions above are restricted to the pets you've added.</div>` : ''}
+  `;
+});
+</script>
+</body>
+</html>
